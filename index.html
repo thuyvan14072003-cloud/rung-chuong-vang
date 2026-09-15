@@ -48,57 +48,270 @@
 <script>
 const TOTAL=180;
 let quiz=[],i=0,score=0,locked=false,audioEnded=false,left=15,timer=null;
-const audio=document.getElementById('audio'),input=document.getElementById('answer'),statusBox=document.getElementById('status'),play=document.getElementById('play'),checkBtn=document.getElementById('check'),next=document.getElementById('next'),timerBox=document.getElementById('timer'),msg=document.getElementById('msg');
-function shuffle(a){const b=[...a];for(let n=b.length-1;n>0;n--){const j=Math.floor(Math.random()*(n+1));[b[n],b[j]]=[b[j],b[n]]}return b}
-function norm(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}
-function resetTimer(){clearInterval(timer);timer=null;left=15;timerBox.textContent='—';timerBox.classList.remove('warn')}
-function setAnswerEnabled(enabled){input.disabled=!enabled;checkBtn.disabled=!enabled;if(enabled)input.focus()}
+
+const audio=document.getElementById('audio');
+const input=document.getElementById('answer');
+const statusBox=document.getElementById('status');
+const play=document.getElementById('play');
+const checkBtn=document.getElementById('check');
+const next=document.getElementById('next');
+const timerBox=document.getElementById('timer');
+const msg=document.getElementById('msg');
+
+function shuffle(a){
+ const b=[...a];
+ for(let n=b.length-1;n>0;n--){
+  const j=Math.floor(Math.random()*(n+1));
+  [b[n],b[j]]=[b[j],b[n]];
+ }
+ return b;
+}
+
+function norm(s){
+ return (s||'')
+ .toLowerCase()
+ .normalize('NFD')
+ .replace(/[\u0300-\u036f]/g,'')
+ .replace(/đ/g,'d')
+ .replace(/\s+/g,' ')
+ .trim();
+}
+
+function resetTimer(){
+ clearInterval(timer);
+ timer=null;
+ left=15;
+ timerBox.textContent='—';
+ timerBox.classList.remove('warn');
+}
+
+function setAnswerEnabled(enabled){
+ input.disabled=!enabled;
+ checkBtn.disabled=!enabled;
+ if(enabled) input.focus();
+}
 
 document.getElementById('start').onclick=()=>{
- if(!Array.isArray(window.GAME_QUESTIONS)||window.GAME_QUESTIONS.length===0){alert('Không tải được dữ liệu 180 câu. Hãy kiểm tra file questions.js.');return}
- quiz=shuffle(window.GAME_QUESTIONS).slice(0,TOTAL);i=0;score=0;
- document.getElementById('setup').style.display='none';document.getElementById('game').style.display='block';show();
+ if(!Array.isArray(window.GAME_QUESTIONS)||window.GAME_QUESTIONS.length===0){
+  alert('Không tải được dữ liệu 180 câu. Hãy kiểm tra file questions.js.');
+  return;
+ }
+
+ quiz=shuffle(window.GAME_QUESTIONS).slice(0,TOTAL);
+ i=0;
+ score=0;
+
+ document.getElementById('setup').style.display='none';
+ document.getElementById('game').style.display='block';
+
+ show();
 };
 
 function show(){
- clearInterval(timer);timer=null;locked=false;audioEnded=false;resetTimer();
- statusBox.style.display='none';next.style.display='none';setAnswerEnabled(false);input.value='';
+
+ clearInterval(timer);
+ timer=null;
+
+ locked=false;
+ audioEnded=false;
+
+ resetTimer();
+
+ statusBox.style.display='none';
+ next.style.display='none';
+
+ input.value='';
+
+ setAnswerEnabled(true);
+
  const q=quiz[i];
- document.getElementById('no').textContent=`Câu ${i+1} / ${quiz.length}`;
- input.placeholder=q.type==='mc'?'Nhập A / B / C / D':'Nhập đáp án đầy đủ...';
- audio.src=q.audio;audio.load();play.style.display='block';play.disabled=false;
- timerBox.textContent='—';msg.textContent='Bấm PHÁT AUDIO. Khi audio kết thúc, 15 giây mới bắt đầu.';
+
+ document.getElementById('no').textContent=
+ `Câu ${i+1} / ${quiz.length}`;
+
+ input.placeholder=
+ q.type==='mc'
+ ?'Nhập A / B / C / D'
+ :'Nhập đáp án đầy đủ...';
+
+ audio.src=q.audio;
+ audio.load();
+
+ play.style.display='block';
+ play.disabled=false;
+
+ msg.textContent=
+ 'Bạn có thể nhập đáp án ngay khi nghe audio.';
 }
 
 play.onclick=()=>{
- audio.play().then(()=>{play.style.display='none';msg.textContent='🔊 Đang phát audio — chưa tính 15 giây.'}).catch(()=>alert('Không phát được audio.'));
+
+ audio.play()
+ .then(()=>{
+   play.style.display='none';
+   msg.textContent=
+   '🔊 Đang phát audio. Bạn có thể trả lời bất cứ lúc nào.';
+   input.focus();
+ })
+ .catch(()=>{
+   alert('Không phát được audio.');
+ });
+
 };
 
 audio.onended=()=>{
- if(locked||audioEnded)return;
- audioEnded=true;play.style.display='none';setAnswerEnabled(true);left=15;timerBox.textContent=left;msg.textContent='⏱️ Audio đã hết. Bạn có 15 giây để nhập đáp án.';
- timer=setInterval(()=>{left--;timerBox.textContent=left;timerBox.classList.toggle('warn',left<=5);if(left<=0){clearInterval(timer);timer=null;timeoutQ()}},1000);
+
+ if(locked||audioEnded) return;
+
+ audioEnded=true;
+
+ left=15;
+
+ timerBox.textContent=left;
+
+ msg.textContent=
+ '⏱️ Audio đã hết. Nếu chưa trả lời, bạn còn 15 giây.';
+
+ timer=setInterval(()=>{
+
+  left--;
+
+  timerBox.textContent=left;
+
+  timerBox.classList.toggle('warn',left<=5);
+
+  if(left<=0){
+
+   clearInterval(timer);
+   timer=null;
+
+   timeoutQ();
+  }
+
+ },1000);
 };
 
-function lock(){locked=true;clearInterval(timer);timer=null;setAnswerEnabled(false)}
-function check(){
- if(locked||!audioEnded)return;
- const q=quiz[i],raw=input.value.trim();
- if(!raw){input.focus();return}
- if(q.type==='mc'&&!/^[ABCD]$/i.test(raw)){input.value='';input.placeholder='Chỉ nhập A / B / C / D';input.focus();return}
- lock();
- const ok=q.type==='mc'?raw.toUpperCase()===q.answer:norm(raw)===norm(q.answer);
- if(ok)score++;
- statusBox.className=ok?'status ok':'status bad';
- statusBox.textContent=ok?'✅ ĐÚNG! Đáp án: '+q.answer:'❌ SAI! Đáp án đúng: '+q.answer;
- statusBox.style.display='block';showNext();
+function lock(){
+
+ locked=true;
+
+ clearInterval(timer);
+ timer=null;
+
+ setAnswerEnabled(false);
 }
+
+function check(){
+
+ if(locked) return;
+
+ const q=quiz[i];
+
+ const raw=input.value.trim();
+
+ if(!raw){
+
+  input.focus();
+  return;
+ }
+
+ if(
+   q.type==='mc' &&
+   !/^[ABCD]$/i.test(raw)
+ ){
+
+  input.value='';
+  input.placeholder='Chỉ nhập A / B / C / D';
+  input.focus();
+
+  return;
+ }
+
+ lock();
+
+ const ok=
+ q.type==='mc'
+ ? raw.toUpperCase()===q.answer
+ : norm(raw)===norm(q.answer);
+
+ if(ok) score++;
+
+ statusBox.className=
+ ok
+ ? 'status ok'
+ : 'status bad';
+
+ statusBox.textContent=
+ ok
+ ? '✅ ĐÚNG! Đáp án: '+q.answer
+ : '❌ SAI! Đáp án đúng: '+q.answer;
+
+ statusBox.style.display='block';
+
+ showNext();
+}
+
 checkBtn.onclick=check;
-input.onkeydown=e=>{if(e.key==='Enter')check()};
-function timeoutQ(){if(locked)return;lock();const q=quiz[i];statusBox.className='status time';statusBox.textContent='⏰ HẾT GIỜ! Đáp án đúng: '+q.answer;statusBox.style.display='block';showNext()}
-function showNext(){next.style.display='block';next.textContent=i===quiz.length-1?'XEM KẾT QUẢ →':'CÂU TIẾP THEO →'}
-next.onclick=()=>{i++;if(i>=quiz.length)finish();else show()};
-function finish(){audio.pause();clearInterval(timer);document.getElementById('game').style.display='none';document.getElementById('result').style.display='block';document.getElementById('score').textContent=`${score} / ${quiz.length}`;document.getElementById('resultText').textContent=`Bạn trả lời đúng ${score} trên ${quiz.length} câu.`}
+
+input.onkeydown=(e)=>{
+ if(e.key==='Enter') check();
+};
+
+function timeoutQ(){
+
+ if(locked) return;
+
+ lock();
+
+ const q=quiz[i];
+
+ statusBox.className='status time';
+
+ statusBox.textContent=
+ '⏰ HẾT GIỜ! Đáp án đúng: '+q.answer;
+
+ statusBox.style.display='block';
+
+ showNext();
+}
+
+function showNext(){
+
+ next.style.display='block';
+
+ next.textContent=
+ i===quiz.length-1
+ ?'XEM KẾT QUẢ →'
+ :'CÂU TIẾP THEO →';
+}
+
+next.onclick=()=>{
+
+ i++;
+
+ if(i>=quiz.length){
+  finish();
+ }else{
+  show();
+ }
+
+};
+
+function finish(){
+
+ audio.pause();
+
+ clearInterval(timer);
+
+ document.getElementById('game').style.display='none';
+ document.getElementById('result').style.display='block';
+
+ document.getElementById('score').textContent=
+ `${score} / ${quiz.length}`;
+
+ document.getElementById('resultText').textContent=
+ `Bạn trả lời đúng ${score} trên ${quiz.length} câu.`;
+}
 </script>
 </div></div>
 </body>
