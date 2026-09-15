@@ -1,2 +1,105 @@
 <!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Rung Chuông Vàng – 180 câu</title><style>body{margin:0;background:#f3f6fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.app{max-width:760px;margin:auto;padding:14px}.card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 22px #0002}h1{text-align:center;font-size:22px}.sub,.hint{text-align:center;color:#667085;font-size:14px}.top{display:flex;justify-content:space-between;align-items:center;margin:16px 0}.badge{background:#eaf0ff;color:#175cd3;padding:7px 10px;border-radius:999px;font-weight:800}.timer{font-size:34px;font-weight:900}.warn{color:#d92d20}.audio{padding:14px;border:1px solid #d0d5dd;border-radius:14px;background:#f8fafc}audio{width:100%}button{width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}.primary{background:#175cd3;color:#fff}#game,#result{display:none}.answerbox{margin-top:20px}label{display:block;font-weight:800;font-size:17px;margin-bottom:8px}input{width:100%;padding:14px;border:2px solid #d0d5dd;border-radius:12px;font-size:22px;text-align:center;outline:none;box-sizing:border-box}.status{display:none;margin-top:16px;padding:14px;border-radius:12px;font-weight:800}.ok{background:#ecfdf3;color:#027a48}.bad{background:#fef3f2;color:#b42318}.time{background:#fffaeb;color:#b54708}.score{font-size:52px;font-weight:900;text-align:center}#next{display:none;margin-top:14px}</style></head><body><div class="app"><div class="card"><h1>🔔 RUNG CHUÔNG VÀNG</h1><div class="sub">180 câu • Xáo trộn • Audio xong mới tính 15 giây</div><div id="setup"><p><b>Bản tối ưu cho iPhone.</b></p><p class="hint">Không hiện câu hỏi hoặc phương án. Nghe audio rồi tự nhập đáp án.</p><button id="start" class="primary">BẮT ĐẦU</button></div><div id="game"><div class="top"><div id="no" class="badge"></div><div id="timer" class="timer">15</div></div><div class="audio"><audio id="audio" controls preload="metadata"></audio><button id="play" class="primary">▶ PHÁT AUDIO</button><div id="msg" class="hint">Bấm PHÁT AUDIO. Khi audio kết thúc, 15 giây mới bắt đầu.</div></div><div class="answerbox"><label>Nhập đáp án</label><input id="answer" autocomplete="off" placeholder="Nhập đáp án của bạn"><button id="check" class="primary" style="margin-top:10px">KIỂM TRA ĐÁP ÁN</button><div class="hint">Trắc nghiệm: A/B/C/D. Câu điền: nhập tự do.</div></div><div id="status" class="status"></div><button id="next" class="primary">CÂU TIẾP THEO →</button></div><div id="result"><h2>🎉 HOÀN THÀNH</h2><div id="score" class="score"></div><p id="resultText"></p><button class="primary" onclick="location.reload()">CHƠI LẠI</button></div><script src="questions.js"></script><script>let quiz=[],i=0,score=0,locked=false,left=15,timer=null;const audio=document.getElementById('audio'),input=document.getElementById('answer'),statusBox=document.getElementById('status'),play=document.getElementById('play'),checkBtn=document.getElementById('check'),next=document.getElementById('next');function shuffle(a){a=[...a];for(let n=a.length-1;n>0;n--){let j=Math.floor(Math.random()*(n+1));[a[n],a[j]]=[a[j],a[n]]}return a}function norm(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}document.getElementById('start').onclick=()=>{quiz=shuffle(window.GAME_QUESTIONS);i=0;score=0;document.getElementById('setup').style.display='none';document.getElementById('game').style.display='block';show()};function show(){clearInterval(timer);locked=false;left=15;statusBox.style.display='none';next.style.display='none';checkBtn.style.display='block';input.disabled=false;input.value='';const q=quiz[i];document.getElementById('no').textContent=`Câu ${i+1} / ${quiz.length}`;document.getElementById('timer').textContent='15';document.getElementById('timer').classList.remove('warn');input.placeholder=q.type==='mc'?'Nhập A / B / C / D':'Nhập đáp án đầy đủ...';audio.src=q.audio;audio.load();play.style.display='block';document.getElementById('msg').textContent='Bấm PHÁT AUDIO. Khi audio kết thúc, 15 giây mới bắt đầu.'}play.onclick=()=>audio.play().then(()=>{play.style.display='none';document.getElementById('msg').textContent='🔊 Đang phát audio — chưa tính 15 giây.'}).catch(()=>alert('Không phát được audio.'));audio.onended=()=>{left=15;tick();clearInterval(timer);timer=setInterval(()=>{left--;tick();if(left<=0){clearInterval(timer);timeoutQ()}},1000)};function tick(){const t=document.getElementById('timer');t.textContent=left;t.classList.toggle('warn',left<=5)}checkBtn.onclick=check;input.onkeydown=e=>{if(e.key==='Enter')check()};function lock(){locked=true;clearInterval(timer);input.disabled=true;checkBtn.style.display='none'}function check(){if(locked)return;const q=quiz[i],raw=input.value.trim();if(!raw)return input.focus();if(q.type==='mc'&&!/^[ABCD]$/i.test(raw)){input.value='';input.placeholder='Chỉ nhập A / B / C / D';return}lock();const ok=q.type==='mc'?raw.toUpperCase()===q.answer:norm(raw)===norm(q.answer);statusBox.className=ok?'status ok':'status bad';statusBox.textContent=ok?'✅ ĐÚNG! Đáp án: '+q.answer:'❌ SAI! Đáp án đúng: '+q.answer;if(ok)score++;statusBox.style.display='block';showNext()}function timeoutQ(){if(locked)return;lock();const q=quiz[i];statusBox.className='status time';statusBox.textContent='⏰ HẾT GIỜ! Đáp án đúng: '+q.answer;statusBox.style.display='block';showNext()}function showNext(){next.style.display='block';next.textContent=i===quiz.length-1?'XEM KẾT QUẢ →':'CÂU TIẾP THEO →'}next.onclick=()=>{i++;if(i>=quiz.length)finish();else show()};function finish(){audio.pause();document.getElementById('game').style.display='none';document.getElementById('result').style.display='block';document.getElementById('score').textContent=`${score} / ${quiz.length}`;document.getElementById('resultText').textContent=`Bạn trả lời đúng ${score} trên ${quiz.length} câu.`}</script></div></div></body></html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rung Chuông Vàng – 180 câu</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.app{max-width:760px;margin:auto;padding:14px}.card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 22px #0002}h1{text-align:center;font-size:22px;margin:4px 0 8px}.sub,.hint{text-align:center;color:#667085;font-size:14px}.top{display:flex;justify-content:space-between;align-items:center;margin:16px 0}.badge{background:#eaf0ff;color:#175cd3;padding:7px 10px;border-radius:999px;font-weight:800}.timer{font-size:34px;font-weight:900}.warn{color:#d92d20}.audio{padding:14px;border:1px solid #d0d5dd;border-radius:14px;background:#f8fafc}audio{width:100%;margin-bottom:10px}button{width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}.primary{background:#175cd3;color:#fff}.secondary{background:#eef2f6;color:#172033}button:disabled{opacity:.5;cursor:not-allowed}#game,#result{display:none}.answerbox{margin-top:20px}label{display:block;font-weight:800;font-size:17px;margin-bottom:8px}input{width:100%;padding:14px;border:2px solid #d0d5dd;border-radius:12px;font-size:22px;text-align:center;outline:none}input:disabled{background:#f2f4f7}.status{display:none;margin-top:16px;padding:14px;border-radius:12px;font-weight:800}.ok{background:#ecfdf3;color:#027a48}.bad{background:#fef3f2;color:#b42318}.time{background:#fffaeb;color:#b54708}.score{font-size:52px;font-weight:900;text-align:center}#next{display:none;margin-top:14px}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app"><div class="card">
+<h1>🔔 RUNG CHUÔNG VÀNG</h1>
+<div class="sub">180 câu • Xáo trộn • Audio xong mới tính 15 giây</div>
+
+<div id="setup">
+<p><b>Bản tối ưu cho iPhone.</b></p>
+<p class="hint">Không hiện câu hỏi hoặc phương án. Nghe audio rồi tự nhập đáp án.</p>
+<button id="start" class="primary">BẮT ĐẦU</button>
+</div>
+
+<div id="game">
+<div class="top"><div id="no" class="badge"></div><div id="timer" class="timer">—</div></div>
+<div class="audio">
+<audio id="audio" controls preload="metadata"></audio>
+<button id="play" class="primary">▶ PHÁT AUDIO</button>
+<div id="msg" class="hint">Bấm PHÁT AUDIO để nghe câu hỏi. Hết audio mới bắt đầu 15 giây.</div>
+</div>
+
+<div class="answerbox">
+<label>Nhập đáp án</label>
+<input id="answer" autocomplete="off" disabled placeholder="Hãy nghe hết audio trước">
+<button id="check" class="primary" style="margin-top:10px" disabled>KIỂM TRA ĐÁP ÁN</button>
+<div class="hint">Trắc nghiệm: nhập A/B/C/D. Câu điền: nhập từ, số hoặc cụm từ đầy đủ.</div>
+</div>
+<div id="status" class="status"></div>
+<button id="next" class="primary">CÂU TIẾP THEO →</button>
+</div>
+
+<div id="result">
+<h2>🎉 HOÀN THÀNH</h2>
+<div id="score" class="score"></div>
+<p id="resultText"></p>
+<button class="primary" onclick="location.reload()">CHƠI LẠI</button>
+</div>
+
+<script src="questions.js"></script>
+<script>
+const TOTAL=180;
+let quiz=[],i=0,score=0,locked=false,audioEnded=false,left=15,timer=null;
+const audio=document.getElementById('audio'),input=document.getElementById('answer'),statusBox=document.getElementById('status'),play=document.getElementById('play'),checkBtn=document.getElementById('check'),next=document.getElementById('next'),timerBox=document.getElementById('timer'),msg=document.getElementById('msg');
+function shuffle(a){const b=[...a];for(let n=b.length-1;n>0;n--){const j=Math.floor(Math.random()*(n+1));[b[n],b[j]]=[b[j],b[n]]}return b}
+function norm(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim()}
+function resetTimer(){clearInterval(timer);timer=null;left=15;timerBox.textContent='—';timerBox.classList.remove('warn')}
+function setAnswerEnabled(enabled){input.disabled=!enabled;checkBtn.disabled=!enabled;if(enabled)input.focus()}
+
+document.getElementById('start').onclick=()=>{
+ if(!Array.isArray(window.GAME_QUESTIONS)||window.GAME_QUESTIONS.length===0){alert('Không tải được dữ liệu 180 câu. Hãy kiểm tra file questions.js.');return}
+ quiz=shuffle(window.GAME_QUESTIONS).slice(0,TOTAL);i=0;score=0;
+ document.getElementById('setup').style.display='none';document.getElementById('game').style.display='block';show();
+};
+
+function show(){
+ clearInterval(timer);timer=null;locked=false;audioEnded=false;resetTimer();
+ statusBox.style.display='none';next.style.display='none';setAnswerEnabled(false);input.value='';
+ const q=quiz[i];
+ document.getElementById('no').textContent=`Câu ${i+1} / ${quiz.length}`;
+ input.placeholder=q.type==='mc'?'Nhập A / B / C / D':'Nhập đáp án đầy đủ...';
+ audio.src=q.audio;audio.load();play.style.display='block';play.disabled=false;
+ timerBox.textContent='—';msg.textContent='Bấm PHÁT AUDIO. Khi audio kết thúc, 15 giây mới bắt đầu.';
+}
+
+play.onclick=()=>{
+ audio.play().then(()=>{play.style.display='none';msg.textContent='🔊 Đang phát audio — chưa tính 15 giây.'}).catch(()=>alert('Không phát được audio.'));
+};
+
+audio.onended=()=>{
+ if(locked||audioEnded)return;
+ audioEnded=true;play.style.display='none';setAnswerEnabled(true);left=15;timerBox.textContent=left;msg.textContent='⏱️ Audio đã hết. Bạn có 15 giây để nhập đáp án.';
+ timer=setInterval(()=>{left--;timerBox.textContent=left;timerBox.classList.toggle('warn',left<=5);if(left<=0){clearInterval(timer);timer=null;timeoutQ()}},1000);
+};
+
+function lock(){locked=true;clearInterval(timer);timer=null;setAnswerEnabled(false)}
+function check(){
+ if(locked||!audioEnded)return;
+ const q=quiz[i],raw=input.value.trim();
+ if(!raw){input.focus();return}
+ if(q.type==='mc'&&!/^[ABCD]$/i.test(raw)){input.value='';input.placeholder='Chỉ nhập A / B / C / D';input.focus();return}
+ lock();
+ const ok=q.type==='mc'?raw.toUpperCase()===q.answer:norm(raw)===norm(q.answer);
+ if(ok)score++;
+ statusBox.className=ok?'status ok':'status bad';
+ statusBox.textContent=ok?'✅ ĐÚNG! Đáp án: '+q.answer:'❌ SAI! Đáp án đúng: '+q.answer;
+ statusBox.style.display='block';showNext();
+}
+checkBtn.onclick=check;
+input.onkeydown=e=>{if(e.key==='Enter')check()};
+function timeoutQ(){if(locked)return;lock();const q=quiz[i];statusBox.className='status time';statusBox.textContent='⏰ HẾT GIỜ! Đáp án đúng: '+q.answer;statusBox.style.display='block';showNext()}
+function showNext(){next.style.display='block';next.textContent=i===quiz.length-1?'XEM KẾT QUẢ →':'CÂU TIẾP THEO →'}
+next.onclick=()=>{i++;if(i>=quiz.length)finish();else show()};
+function finish(){audio.pause();clearInterval(timer);document.getElementById('game').style.display='none';document.getElementById('result').style.display='block';document.getElementById('score').textContent=`${score} / ${quiz.length}`;document.getElementById('resultText').textContent=`Bạn trả lời đúng ${score} trên ${quiz.length} câu.`}
+</script>
+</div></div>
+</body>
+</html>
